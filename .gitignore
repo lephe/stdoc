@@ -1,0 +1,5 @@
+# Generated files for unit tests
+/tests/*/_www
+
+__pycache__
+
