@@ -67,8 +67,8 @@ def recursive_mkdir(fpath: str) -> None:
         pass
 
 # This function takes a list/iterable of paths as input, which should be sorted
-# or grouped by a traversal order, and then yields a tree dictionary of the
-# paths as in the filesystem and full paths as  values. For example, given
+# or grouped by a traversal order, and then returns a tree dictionary of the
+# paths as in the filesystem and full paths as values. For example, given
 # ["a", "b/c", "b/d", "e", "f/g/h"], this function returns:
 #
 #   {"a": "a",

@@ -58,11 +58,16 @@ class FencedBlockPreprocessor(Preprocessor):
                 continue
             # print(f"Fenced block at line {index}: lang {repr(lang)}, id {repr(id)}, classes {classes}, config {config}, {next_index-index-2} lines of code")
 
+            # Add syntax-<lang> class if <lang> is specified
+            # TODO: Do it based on *inferred* language from pygmentize?
+            classes = " ".join(classes)
+            if lang:
+                classes += " syntax-" + lang
             local_config = {
                 **self.codehilite_conf,
                 **config,
                 # Pygments adds a suffix so we get "codehilitetable"
-                "cssclass": " ".join(classes) + " codehilite" }
+                "cssclass": classes + " codehilite" }
 
             highliter = CodeHilite(code,
                 lang=lang,
