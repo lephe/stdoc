@@ -91,6 +91,32 @@ class PercentCenterExtension(PercentBlockExtensionBase):
         p.set("style", "text-align: center")
         p.text = "\n\n".join(content_blocks)
 
+# This extension allows links to be written as !!non-space-characters and
+# globally set a prefix for what "!!" should expand to. The prefix is taken
+# from document metadata.
+class BangLinksInlineProcessor(InlineProcessor):
+    def handleMatch(self, m, data):
+        if "bang-links" not in self.md.Meta:
+            el = etree.Element("span")
+            el.set("style", "color: red")
+            el.text = m[0]
+        else:
+            el = etree.Element("a")
+            el.set("href", self.md.Meta["bang-links"][0].replace("{}", m[1]))
+            el.set("title", m[1])
+            text_pattern = self.md.Meta.get("bang-links-text", ["{}"])[0]
+            el.text = text_pattern.replace("{}", m[1])
+            # FIXME: Hack that should apply only to URLs
+            if "{}" in text_pattern:
+                el.set("style", "word-break: break-all")
+        return el, m.start(0), m.end(0)
+
+class BangLinksExtension(Extension):
+    def extendMarkdown(self, md):
+        md.registerExtension(self)
+        pattern = r'!!((?:[.,;:)]*[^\s.,;:)])+)'
+        md.inlinePatterns.register(BangLinksInlineProcessor(pattern, md), "banglinks", 180)
+
 _keywords = {
     "???": "unknown",
     "TODO": "todo",
@@ -113,6 +139,7 @@ _md_ext = [
   IncludeExtension(),
   PercentFragmentExtension(),
   PercentCenterExtension(),
+  BangLinksExtension(),
 ]
 
 def make_Markdown():

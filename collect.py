@@ -269,6 +269,8 @@ def initialParse(mainBundle, md):
             elif key == "label":
                 assert all(v.startswith("@") for v in value)
                 fileLabels.extend(value)
+            elif key in ["bang-links", "bang-links-text"]:
+                pass
             else:
                 warn(f"{path}: unknown metadata '{key}' of length {len(value)}")
 

@@ -13,6 +13,7 @@ import sys
 import shutil
 import stdoc.stmarkdown
 import stdoc.collect
+from typing import Tuple
 from stdoc.util import *
 
 USAGE = """\
@@ -79,7 +80,7 @@ def main(argv):
 
 unresolved_labels = set()
 
-def resolve_label(pages, sourcePage, label, lang) -> Url | None:
+def resolve_label(pages, sourcePage, label, lang) -> Tuple[Url | None, str]:
     # Relative to absolute path
     if not label.startswith(":"):
         label = sourcePage.label_namespace + ":" + label
@@ -89,34 +90,39 @@ def resolve_label(pages, sourcePage, label, lang) -> Url | None:
             continue
         for l, target in p.labels.items():
             if l == label:
-                found.append(target)
+                found.append((target, p.title))
     if len(found) == 0:
         unresolved_labels.add(label)
-        return None
+        return None, ""
     elif len(found) > 1:
         err(f"multiple definitions of label @{label} found")
     return found[0]
 
 def replace_url(p, url, pages):
     if url is None:
-        return None
+        return None, None, None
     if url.startswith("="):
-        return p.relpath(p.localStaticUrl() / url[1:])
+        return p.relpath(p.localStaticUrl() / url[1:]), None, None
     if url.startswith("=:"):
-        return p.relpath(p.globalStaticUrl() / url[2:])
+        return p.relpath(p.globalStaticUrl() / url[2:]), None, None
     if url.startswith("@"):
-        target = resolve_label(pages, p, url[1:], p.lang)
-        return p.relpath(target) if target is not None else None
-    return url
+        target, title = resolve_label(pages, p, url[1:], p.lang)
+        if target is None:
+            return None, None, None
+        else:
+            return p.relpath(target), url, title
+    return url, None, None
 
 def patch_static_urls(p, tree, pages):
     for a in tree.iterfind(".//a"):
-        new_url = replace_url(p, a.get("href"), pages)
+        new_url, old_text, new_text = replace_url(p, a.get("href"), pages)
         if new_url is None:
             a.attrib.pop("href")
             a.set("class", "broken")
         else:
             a.set("href", new_url)
+            if a.text == old_text:
+                a.text = new_text
     for img in tree.iterfind(".//img"):
         img.set("src", replace_url(p, img.get("src"), pages))
 
@@ -150,7 +156,7 @@ import jinja2
 def makeRefFunction(pages, p):
     def ref(label):
         assert label.startswith("@")
-        target = resolve_label(pages, p, label[1:], p.lang)
+        target, _ = resolve_label(pages, p, label[1:], p.lang)
         rp = p.relpath(target) if target is not None else None
         # print("<> from", p.url(), "target", label, "=", target, "->", rp)
         return rp
