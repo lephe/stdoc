@@ -121,7 +121,7 @@ def patch_static_urls(p, tree, pages):
             a.set("class", "broken")
         else:
             a.set("href", new_url)
-            if a.text == old_text:
+            if a.text == old_text or a.text == "":
                 a.text = new_text
     for img in tree.iterfind(".//img"):
         img.set("src", replace_url(p, img.get("src"), pages))

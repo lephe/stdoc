@@ -57,24 +57,46 @@ class PercentTableExtension(PercentBlockExtensionBase):
 class LabelInlineProcessor(InlineProcessor):
     def handleMatch(self, m, data):
         el = etree.Element("span")
-        el.set("id", m[1])
+        target = m[0]
+
+        if target.startswith("#"):
+            el.set("id", target[1:])
+        else:
+            # TODO: Collect global labels and give a reasonable id
+            assert target.startswith("@")
+            el.set("id", target)
         return el, m.start(0), m.end(0)
 
 class LabelReferenceInlineProcessor(InlineProcessor):
     def handleMatch(self, m, data):
         el = etree.Element("a")
-        el.set("href", m[0])
-        el.text = m[0]
+        target = m[1]
+
+        if target.startswith("#"):
+            # Resolve local labels immediately
+            el.set("href", target)
+            # TODO: Associate title with local labels?
+            # Trick to avoid text being matched by label pattern later on.
+            el.text = target.replace("#", "&#x23;")
+        else:
+            assert target.startswith("@")
+            # Leave crossref mechanism to patch this target. Set text empty
+            # because keeping the "@" in there would cause the label processor
+            # to create a label. Empty text will be replaced automatically with
+            # target title later on.
+            el.set("href", m[1])
+            el.text = ""
         return el, m.start(0), m.end(0)
 
 class LabelsExtension(Extension):
     def extendMarkdown(self, md):
         md.registerExtension(self)
+        # Substitute references first so they don't get matched as labels.
+        REF_PATTERN = r'\[((?:@|(?<!&)#)[a-zA-Z0-9._:-]*[a-zA-Z0-9._])\]'
+        md.inlinePatterns.register(LabelReferenceInlineProcessor(REF_PATTERN, md), "label-ref", 130)
         # 125 is lower than links (170) so we don't substitue in URLs
-        LABEL_PATTERN = r'@=([a-zA-Z0-9._]+)'
+        LABEL_PATTERN = r'((?:@|(?<!&)#)[a-zA-Z0-9._-]+)'
         md.inlinePatterns.register(LabelInlineProcessor(LABEL_PATTERN, md), "label-def", 125)
-        REF_PATTERN = r'@([a-zA-Z0-9_.:]*[a-zA-Z0-9._])'
-        md.inlinePatterns.register(LabelReferenceInlineProcessor(REF_PATTERN, md), "label-ref", 125)
 
 class PercentFragmentExtension(PercentBlockExtensionBase):
     BLOCK_NAMES = ["fragment"]
